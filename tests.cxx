@@ -2,6 +2,7 @@
 #include <map>
 #include <vector>
 
+#include <vigra/multi_array.hxx>
 #include <vigra/graphs_new.hxx>
 #include <vigra/random_forest_new.hxx>
 
@@ -128,10 +129,65 @@ void test_property_map()
     cout << "test_property_map(): Success!" << endl;
 }
 
+void test_random_forest()
+{
+    typedef BinaryDirectedGraph Graph;
+    typedef Graph::Node Node;
+    typedef LessEqualSplitTest<double> SplitTest;
+    typedef ArgMaxAcc Acc;
+    typedef RandomForest<MultiArrayView<2, double>, MultiArrayView<1, int>, SplitTest, Acc> RF;
+
+    Graph gr;
+    PropertyMap<Node, SplitTest> split_tests;
+    PropertyMap<Node, size_t> leaf_responses;
+    {
+        Node n0 = gr.addNode();
+        Node n1 = gr.addNode();
+        Node n2 = gr.addNode();
+        Node n3 = gr.addNode();
+        Node n4 = gr.addNode();
+        Node n5 = gr.addNode();
+        Node n6 = gr.addNode();
+        gr.addArc(n0, n1);
+        gr.addArc(n0, n2);
+        gr.addArc(n1, n3);
+        gr.addArc(n1, n4);
+        gr.addArc(n2, n5);
+        gr.addArc(n2, n6);
+
+        split_tests[n0] = SplitTest(0, 0.6);
+        split_tests[n1] = SplitTest(1, 0.25);
+        split_tests[n2] = SplitTest(1, 0.75);
+        leaf_responses[n3] = 0;
+        leaf_responses[n4] = 1;
+        leaf_responses[n5] = 2;
+        leaf_responses[n6] = 3;
+    }
+    RF rf = RF(gr, split_tests, leaf_responses, {0, 1, -7, 3});
+
+    double test_x_values[] = {
+        0.2, 0.4, 0.2, 0.4, 0.7, 0.8, 0.7, 0.8,
+        0.2, 0.2, 0.7, 0.7, 0.2, 0.2, 0.8, 0.8
+    };
+    MultiArray<2, double> test_x(Shape2(8, 2), test_x_values);
+    int test_y_values[] = {
+        0, 0, 1, 1, -7, -7, 3, 3
+    };
+    MultiArray<1, int> test_y(Shape1(8), test_y_values);
+    MultiArray<1, int> pred_y(Shape1(8));
+    rf.predict(test_x, pred_y);
+    vigra_assert(
+        std::vector<int>(test_y.begin(), test_y.end()) == std::vector<int>(pred_y.begin(), pred_y.end()),
+        "Error in RandomForest prediction."
+    );
+
+    cout << "test_random_forest(): Success!" << endl;
+}
 
 int main()
 {
     test_binary_directed_graph();
     test_property_map();
+    test_random_forest();
 }
 
