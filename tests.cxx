@@ -129,13 +129,13 @@ void test_property_map()
     cout << "test_property_map(): Success!" << endl;
 }
 
-void test_random_forest()
+void test_random_forest_class()
 {
     typedef BinaryDirectedGraph Graph;
     typedef Graph::Node Node;
     typedef LessEqualSplitTest<double> SplitTest;
     typedef ArgMaxAcc Acc;
-    typedef RandomForest<MultiArrayView<2, double>, MultiArrayView<1, int>, SplitTest, Acc> RF;
+    typedef RandomForest<double, int, SplitTest, Acc> RF;
 
     Graph gr;
     PropertyMap<Node, SplitTest> split_tests;
@@ -163,7 +163,7 @@ void test_random_forest()
         leaf_responses[n5] = 2;
         leaf_responses[n6] = 3;
     }
-    RF rf = RF(gr, split_tests, leaf_responses, {0, 1, -7, 3});
+    RF rf = RF(gr, split_tests, leaf_responses, {0, 1, -7, 3}, 2);
 
     double test_x_values[] = {
         0.2, 0.4, 0.2, 0.4, 0.7, 0.8, 0.7, 0.8,
@@ -184,10 +184,16 @@ void test_random_forest()
     cout << "test_random_forest(): Success!" << endl;
 }
 
+void test_default_random_forest()
+{
+    cout << "test_default_random_forest(): Success!" << endl;
+}
+
 int main()
 {
     test_binary_directed_graph();
     test_property_map();
-    test_random_forest();
+    test_random_forest_class();
+    test_default_random_forest();
 }
 
