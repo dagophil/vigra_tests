@@ -75,6 +75,40 @@ void test_binary_directed_graph()
         vigra_assert(gr.getRoot(0) == n0 && gr.getRoot(1) == lemon::INVALID, "Error in getRoot.");
     }
 
+    // Check merge.
+    {
+        Graph gr2;
+        Node n0 = gr2.addNode();
+        Node n1 = gr2.addNode();
+        Node n2 = gr2.addNode();
+        Node n3 = gr2.addNode();
+        gr2.addArc(n0, n1);
+        gr2.addArc(n1, n2);
+        gr2.addArc(n0, n3);
+
+        gr2.merge(gr);
+
+        vigra_assert(gr2.numNodes() == 9, "Error in merge, wrong number of nodes.");
+        vigra_assert(gr2.numArcs() == 8, "Error in merge, wrong number of arcs.");
+        vigra_assert(gr2.getChild(n0, 0) == n1 && gr2.getChild(n0, 1) == n3 && gr2.getChild(n1) == n2,
+                     "Error in merge, old children are wrong.");
+        vigra_assert(gr2.getParent(n1) == n0 && gr2.getParent(n2) == n1 && gr2.getParent(n3) == n0,
+                     "Error in merge, old parents are wrong.");
+        Node n4 = gr.nodeFromId(4);
+        Node n5 = gr.nodeFromId(5);
+        Node n6 = gr.nodeFromId(6);
+        Node n7 = gr.nodeFromId(7);
+        Node n8 = gr.nodeFromId(8);
+        vigra_assert(gr2.getChild(n4, 0) == n5 && gr2.getChild(n4, 1) == n6 && gr2.getChild(n5, 0) == n7 &&
+                     gr2.getChild(n5, 1) == n8 && gr2.getChild(n6, 0) == n8,
+                     "Error in merge, new children are wrong.");
+        vigra_assert(gr2.getParent(n5) == n4 && gr2.getParent(n6) == n4 && gr2.getParent(n7) == n5 &&
+                     gr2.getParent(n8, 0) == n5 && gr2.getParent(n8, 1) == n6,
+                     "Error in merge, new parents are wrong.");
+        vigra_assert(gr2.numRoots() == 2, "Error in merge, number of root nodes is wrong.");
+        vigra_assert(gr2.getRoot(0) == n0 && gr2.getRoot(1) == n4, "Error in merge, root nodes are wrong.");
+    }
+
     cout << "test_binary_directed_graph(): Success!" << endl;
 }
 
@@ -186,6 +220,28 @@ void test_random_forest_class()
 
 void test_default_random_forest()
 {
+    double train_x_values[] = {
+        0.2, 0.4, 0.2, 0.4, 0.7, 0.8, 0.7, 0.8,
+        0.2, 0.2, 0.7, 0.7, 0.2, 0.2, 0.8, 0.8
+    };
+    MultiArray<2, double> train_x(Shape2(8, 2), train_x_values);
+    int train_y_values[] = {
+        0, 0, 1, 1, -7, -7, 3, 3
+    };
+    MultiArray<1, int> train_y(Shape1(8), train_y_values);
+    MultiArray<2, double> test_x(train_x);
+    MultiArray<1, int> test_y(train_y);
+
+    RandomForestOptions options = RandomForestOptions().tree_count(10);
+
+    auto rf = random_forest(train_x, train_y, options, 4);
+    MultiArray<1, int> pred_y(Shape1(8));
+    rf.predict(test_x, pred_y);
+    vigra_assert(
+        std::vector<int>(test_y.begin(), test_y.end()) == std::vector<int>(pred_y.begin(), pred_y.end()),
+        "Error in RandomForest prediction."
+    );
+
     cout << "test_default_random_forest(): Success!" << endl;
 }
 

@@ -18,10 +18,12 @@ include_directories(${HDF5_INCLUDE_DIR})
 add_executable(tests
     tests.cxx
 )
-target_link_libraries(tests
-    ${VIGRA_IMPEX_LIBRARY}
-    ${HDF5_LIBRARIES}
-)
+
+#target_link_libraries(tests
+#    ${VIGRA_IMPEX_LIBRARY}
+#    ${HDF5_LIBRARIES}
+#    ${CMAKE_THREAD_LIBS_INIT}
+#)
 
 # Run vigra installation before running the tests (I always forget that...)
 add_custom_target(install_vigra
