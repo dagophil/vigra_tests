@@ -5,9 +5,22 @@
 #include <vigra/multi_array.hxx>
 #include <vigra/graphs_new.hxx>
 #include <vigra/random_forest_new.hxx>
+#include <vigra/random_forest_new/random_forest_common.hxx>
 
 using namespace std;
 using namespace vigra;
+
+void test_permutation_iterator()
+{
+    vector<int> vec = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+    vector<size_t> perm = {5, 2, 3, 3, 8};
+    vector<int> expected = {6, 3, 4, 4, 9};
+    auto begin = make_permutation_iterator(vec.begin(), perm.begin());
+    auto end = make_permutation_iterator(vec.begin(), perm.end());
+    vector<int> result(begin, end);
+
+    cout << "test_permutation_iterator(): Success!" << endl;
+}
 
 void test_binary_directed_graph()
 {
@@ -220,6 +233,8 @@ void test_random_forest_class()
 
 void test_default_random_forest()
 {
+    int const n_threads = -1;
+
     double train_x_values[] = {
         0.2, 0.4, 0.2, 0.4, 0.7, 0.8, 0.7, 0.8,
         0.2, 0.2, 0.7, 0.7, 0.2, 0.2, 0.8, 0.8
@@ -232,11 +247,11 @@ void test_default_random_forest()
     MultiArray<2, double> test_x(train_x);
     MultiArray<1, int> test_y(train_y);
 
-    RandomForestOptions options = RandomForestOptions().tree_count(10);
+    RandomForestOptions options = RandomForestOptions().tree_count(100);
 
-    auto rf = random_forest(train_x, train_y, options, 4);
+    auto rf = random_forest(train_x, train_y, options, n_threads);
     MultiArray<1, int> pred_y(Shape1(8));
-    rf.predict(test_x, pred_y);
+    rf.predict(test_x, pred_y, n_threads);
     vigra_assert(
         std::vector<int>(test_y.begin(), test_y.end()) == std::vector<int>(pred_y.begin(), pred_y.end()),
         "Error in RandomForest prediction."
@@ -247,6 +262,7 @@ void test_default_random_forest()
 
 int main()
 {
+    test_permutation_iterator();
     test_binary_directed_graph();
     test_property_map();
     test_random_forest_class();
