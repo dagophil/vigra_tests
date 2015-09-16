@@ -233,24 +233,28 @@ void test_random_forest_class()
 
 void test_default_random_forest()
 {
-    int const n_threads = -1;
+    typedef MultiArray<2, double> Features;
+    typedef MultiArray<1, int> Labels;
+
+    int const n_threads = 1;
+    int const n_trees = 1;
 
     double train_x_values[] = {
         0.2, 0.4, 0.2, 0.4, 0.7, 0.8, 0.7, 0.8,
         0.2, 0.2, 0.7, 0.7, 0.2, 0.2, 0.8, 0.8
     };
-    MultiArray<2, double> train_x(Shape2(8, 2), train_x_values);
+    Features train_x(Shape2(8, 2), train_x_values);
     int train_y_values[] = {
         0, 0, 1, 1, -7, -7, 3, 3
     };
-    MultiArray<1, int> train_y(Shape1(8), train_y_values);
-    MultiArray<2, double> test_x(train_x);
-    MultiArray<1, int> test_y(train_y);
+    Labels train_y(Shape1(8), train_y_values);
+    Features test_x(train_x);
+    Labels test_y(train_y);
 
-    RandomForestOptions options = RandomForestOptions().tree_count(100);
+    RandomForestOptions options = RandomForestOptions().tree_count(n_trees).bootstrap_sampling(false);
 
-    auto rf = random_forest(train_x, train_y, options, n_threads);
-    MultiArray<1, int> pred_y(Shape1(8));
+    auto rf = random_forest<Features, Labels, KSDScorer>(train_x, train_y, options, n_threads);
+    Labels pred_y(Shape1(8));
     rf.predict(test_x, pred_y, n_threads);
     vigra_assert(
         std::vector<int>(test_y.begin(), test_y.end()) == std::vector<int>(pred_y.begin(), pred_y.end()),
