@@ -253,7 +253,7 @@ void test_default_random_forest()
 
     RandomForestOptions options = RandomForestOptions().tree_count(n_trees).bootstrap_sampling(false);
 
-    auto rf = random_forest<Features, Labels, KSDScorer>(train_x, train_y, options, n_threads);
+    auto rf = random_forest<Features, Labels, GiniScorer>(train_x, train_y, options, n_threads);
     Labels pred_y(Shape1(8));
     rf.predict(test_x, pred_y, n_threads);
     vigra_assert(
