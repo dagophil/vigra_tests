@@ -191,7 +191,7 @@ void test_random_forest_class()
     typedef Graph::Node Node;
     typedef LessEqualSplitTest<double> SplitTest;
     typedef ArgMaxAcc Acc;
-    typedef RandomForest<double, int, SplitTest, Acc> RF;
+    typedef RandomForest<MultiArray<2, double>, MultiArray<1, int>, SplitTest, Acc> RF;
 
     Graph gr;
     PropertyMap<Node, SplitTest> split_tests;
@@ -219,7 +219,8 @@ void test_random_forest_class()
         leaf_responses[n5] = 2;
         leaf_responses[n6] = 3;
     }
-    RF rf = RF(gr, split_tests, leaf_responses, {0, 1, -7, 3}, 2);
+    PropertyMap<Node, std::vector<size_t> > node_distributions;
+    RF rf = RF(gr, split_tests, node_distributions, leaf_responses, {0, 1, -7, 3}, 2);
 
     double test_x_values[] = {
         0.2, 0.4, 0.2, 0.4, 0.7, 0.8, 0.7, 0.8,
@@ -280,7 +281,7 @@ void test_random_forest_mnist()
     typedef MultiArray<2, FeatureType> Features;
     typedef MultiArray<1, LabelType> Labels;
 
-    int const n_threads = 1;
+    int const n_threads = -1;
     int const n_trees = 10;
     string const train_filename = "/home/philip/data/ml-koethe/train.h5";
     string const test_filename = "/home/philip/data/ml-koethe/test.h5";
@@ -293,22 +294,25 @@ void test_random_forest_mnist()
     load_data(train_filename, test_filename, train_x, train_y, test_x, test_y, labels);
 
     // Train the random forest.
-    TIC;
+    // TIC;
     auto rf = random_forest<Features, Labels, GiniScorer>(train_x, train_y, options, n_threads);
-    TOC("Random forest training");
+    // TOC("Random forest training");
 
     // Predict with the forest.
     Labels pred_y(Shape1(test_y.size()));
-    TIC;
+    // TIC;
     rf.predict(test_x, pred_y, n_threads);
-    TOC("Random forest prediction");
+    // TOC("Random forest prediction");
 
     // Count the correct predicted instances.
     size_t count = 0;
     for (size_t i = 0; i < test_y.size(); ++i)
         if (pred_y(i) == test_y(i))
             ++count;
-    cout << "Performance: " << (count / ((float) pred_y.size())) << " (" << count << " of " << pred_y.size() << ")" << endl;
+    double performance = count / (float)pred_y.size();
+    // cout << "Performance: " << (count / ((float) pred_y.size())) << " (" << count << " of " << pred_y.size() << ")" << endl;
+    vigra_assert(performance > 0.95, "Expected performance of random forest is too low.");
+    std::cout << "test_random_forest_mnist(): Success!" << std::endl;
 }
 
 int main()
