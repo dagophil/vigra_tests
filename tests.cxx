@@ -1,14 +1,23 @@
 #include <iostream>
 #include <map>
 #include <vector>
+#include <chrono>
 
 #include <vigra/multi_array.hxx>
 #include <vigra/graphs_new.hxx>
 #include <vigra/random_forest_new.hxx>
 #include <vigra/random_forest_new/random_forest_common.hxx>
 
+#include "data_utility.hxx"
+
 using namespace std;
 using namespace vigra;
+
+// TIC TOC macros to measure time.
+chrono::steady_clock::time_point starttime, endtime;
+double sec;
+#define TIC starttime = chrono::steady_clock::now();
+#define TOC(msg) endtime = chrono::steady_clock::now(); sec = chrono::duration<double>(endtime-starttime).count(); cout << msg << ": " << sec << " seconds" << endl;
 
 void test_permutation_iterator()
 {
@@ -264,6 +273,44 @@ void test_default_random_forest()
     cout << "test_default_random_forest(): Success!" << endl;
 }
 
+void test_random_forest_mnist()
+{
+    typedef double FeatureType;
+    typedef UInt8 LabelType;
+    typedef MultiArray<2, FeatureType> Features;
+    typedef MultiArray<1, LabelType> Labels;
+
+    int const n_threads = 1;
+    int const n_trees = 10;
+    string const train_filename = "/home/philip/data/ml-koethe/train.h5";
+    string const test_filename = "/home/philip/data/ml-koethe/test.h5";
+    vector<LabelType> labels = {3, 8};
+    RandomForestOptions options = RandomForestOptions().tree_count(n_trees).bootstrap_sampling(true);
+
+    // Load the data.
+    Features train_x, test_x;
+    Labels train_y, test_y;
+    load_data(train_filename, test_filename, train_x, train_y, test_x, test_y, labels);
+
+    // Train the random forest.
+    TIC;
+    auto rf = random_forest<Features, Labels, GiniScorer>(train_x, train_y, options, n_threads);
+    TOC("Random forest training");
+
+    // Predict with the forest.
+    Labels pred_y(Shape1(test_y.size()));
+    TIC;
+    rf.predict(test_x, pred_y, n_threads);
+    TOC("Random forest prediction");
+
+    // Count the correct predicted instances.
+    size_t count = 0;
+    for (size_t i = 0; i < test_y.size(); ++i)
+        if (pred_y(i) == test_y(i))
+            ++count;
+    cout << "Performance: " << (count / ((float) pred_y.size())) << " (" << count << " of " << pred_y.size() << ")" << endl;
+}
+
 int main()
 {
     test_permutation_iterator();
@@ -271,5 +318,6 @@ int main()
     test_property_map();
     test_random_forest_class();
     test_default_random_forest();
+    test_random_forest_mnist();
 }
 
