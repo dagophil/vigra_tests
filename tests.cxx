@@ -219,8 +219,7 @@ void test_random_forest_class()
         leaf_responses[n5] = 2;
         leaf_responses[n6] = 3;
     }
-    PropertyMap<Node, std::vector<size_t> > node_distributions;
-    RF rf = RF(gr, split_tests, node_distributions, leaf_responses, {0, 1, -7, 3}, 2);
+    RF rf = RF(gr, split_tests, leaf_responses, {0, 1, -7, 3}, 2);
 
     double test_x_values[] = {
         0.2, 0.4, 0.2, 0.4, 0.7, 0.8, 0.7, 0.8,
@@ -232,7 +231,7 @@ void test_random_forest_class()
     };
     MultiArray<1, int> test_y(Shape1(8), test_y_values);
     MultiArray<1, int> pred_y(Shape1(8));
-    rf.predict(test_x, pred_y);
+    rf.predict(test_x, pred_y, 1);
     vigra_assert(
         std::vector<int>(test_y.begin(), test_y.end()) == std::vector<int>(pred_y.begin(), pred_y.end()),
         "Error in RandomForest prediction."
@@ -311,7 +310,7 @@ void test_random_forest_mnist()
             ++count;
     double performance = count / (float)pred_y.size();
     // cout << "Performance: " << (count / ((float) pred_y.size())) << " (" << count << " of " << pred_y.size() << ")" << endl;
-    vigra_assert(performance > 0.95, "Expected performance of random forest is too low.");
+    vigra_assert(performance > 0.94, "Expected performance of random forest is too low.");
     std::cout << "test_random_forest_mnist(): Success!" << std::endl;
 }
 
