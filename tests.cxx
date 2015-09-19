@@ -286,6 +286,7 @@ void test_random_forest_mnist()
     string const test_filename = "/home/philip/data/ml-koethe/test.h5";
     vector<LabelType> labels = {3, 8};
     RandomForestOptions options = RandomForestOptions().tree_count(n_trees).bootstrap_sampling(true);
+    // RandomForestOptions options = RandomForestOptions().tree_count(n_trees).resample_count(200);
 
     // Load the data.
     Features train_x, test_x;
