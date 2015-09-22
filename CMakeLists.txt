@@ -4,7 +4,7 @@ project(vigra_newrf_tests)
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/config)
 
 # C++11
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wno-braced-scalar-init")
 
 # VIGRA
 find_package(VIGRA REQUIRED)
@@ -22,7 +22,8 @@ add_executable(tests
 target_link_libraries(tests
     ${VIGRA_IMPEX_LIBRARY}
     ${HDF5_LIBRARIES}
-#    ${CMAKE_THREAD_LIBS_INIT}
+    pthread
+    armadillo
 )
 
 # Run vigra installation before running the tests (I always forget that...)
