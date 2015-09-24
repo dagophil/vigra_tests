@@ -8,6 +8,7 @@
 #include <vigra/random_forest_new.hxx>
 #include <vigra/random_forest_new/random_forest_common.hxx>
 #include <vigra/sparse/regression.hxx>
+#include <vigra/random_forest_new/forest_garrote.hxx>
 
 #include <armadillo>
 
@@ -349,6 +350,50 @@ void test_sparse_lars()
     cout << "test_sparse_lars(): Success!" << endl;
 }
 
+void test_forest_garrote()
+{
+    typedef double FeatureType;
+    typedef UInt8 LabelType;
+    typedef MultiArray<2, FeatureType> Features;
+    typedef MultiArray<1, LabelType> Labels;
+
+    int const n_threads = -1;
+    int const n_trees = 100;
+    string const train_filename = "/home/philip/data/ml-koethe/train.h5";
+    string const test_filename = "/home/philip/data/ml-koethe/test.h5";
+    vector<LabelType> labels = {3, 8};
+    RandomForestOptions options = RandomForestOptions().tree_count(n_trees).bootstrap_sampling(true);
+
+    // Load the data.
+    Features train_x, test_x;
+    Labels train_y, test_y;
+    load_data(train_filename, test_filename, train_x, train_y, test_x, test_y, labels);
+
+    // Train the random forest.
+    TIC;
+    auto rf = random_forest<Features, Labels, GiniScorer, PurityStop, ArgMaxVectorAcc>(train_x, train_y, options, n_threads);
+    TOC("Random forest training");
+
+    // Predict with the forest.
+    Labels pred_y(Shape1(test_y.size()));
+    TIC;
+    rf.predict(test_x, pred_y, n_threads);
+    TOC("Random forest prediction");
+
+    // Count the correct predicted instances.
+    size_t count = 0;
+    for (size_t i = 0; i < test_y.size(); ++i)
+        if (pred_y(i) == test_y(i))
+            ++count;
+    double performance = count / (float)pred_y.size();
+    cout << "Performance: " << (count / ((float) pred_y.size())) << " (" << count << " of " << pred_y.size() << ")" << endl;
+    
+    // Apply the forest garrote.
+    forest_garrote(rf, train_x, train_y);
+
+    cout << "test_forest_garrote(): Success!" << endl;    
+}
+
 int main()
 {
     test_permutation_iterator();
@@ -358,5 +403,6 @@ int main()
     test_default_random_forest();
     test_random_forest_mnist();
     test_sparse_lars();
+    test_forest_garrote();
 }
 
