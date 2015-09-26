@@ -8,6 +8,7 @@
 #include <vigra/random_forest_new.hxx>
 #include <vigra/random_forest_new/random_forest_common.hxx>
 #include <vigra/sparse/regression.hxx>
+#include <vigra/sparse/matrix.hxx>
 #include <vigra/random_forest_new/forest_garrote.hxx>
 
 #include <armadillo>
@@ -350,6 +351,50 @@ void test_sparse_lars()
     cout << "test_sparse_lars(): Success!" << endl;
 }
 
+void test_sparse_matrix()
+{
+    {
+        int vals[] = {
+            10, 0, 0, 12, 0,
+            0, 0, 11, 0, 13,
+            0, 16, 0, 0, 0,
+            0, 0, 11, 0, 13
+        };
+        sparse::DOKMatrix<int> m(Shape2(4, 5), vals);
+        auto m_crs = to_crs(m);
+        m_crs.print();
+        auto m_ccs = to_ccs(m);
+        m_ccs.print();
+        auto m_gram = to_ccs(gram(m_ccs));
+        m_gram.print();
+        cout << m_gram.shape() << endl;
+    }
+    {
+        int vals[] = {
+            10, 0, 0, 12, 0,
+            0, 0, 11, 0, 13,
+            0, 16, 0, 0, 0,
+            0, 0, 11, 0, 13
+        };
+        sparse::COOMatrix<int> m(Shape2(4, 5), vals);
+        auto m_crs = to_crs(m);
+        m_crs.print();
+    }
+    {
+        int vals[] = {
+            1, 2,
+            3, 4,
+            5, 6
+        };
+        sparse::DOKMatrix<int> m(Shape2(3, 2), vals);
+        auto m_crs = to_crs(m);
+        std::vector<int> x = {7, 8};
+        auto y = m_crs.dot(x);
+        m_crs.print();
+        for (auto x : y) cout << x << " "; cout << endl;
+    }
+}
+
 void test_forest_garrote()
 {
     typedef double FeatureType;
@@ -403,6 +448,7 @@ int main()
     test_default_random_forest();
     test_random_forest_mnist();
     test_sparse_lars();
-    test_forest_garrote();
+    // test_sparse_matrix();
+    // test_forest_garrote();
 }
 
