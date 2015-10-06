@@ -1,4 +1,5 @@
 #include <iostream>
+#include <vigra/random_forest_new/forest_garrote.hxx>
 #include <map>
 #include <vector>
 #include <chrono>
@@ -9,7 +10,6 @@
 #include <vigra/random_forest_new/random_forest_common.hxx>
 #include <vigra/sparse/regression.hxx>
 #include <vigra/sparse/matrix.hxx>
-#include <vigra/random_forest_new/forest_garrote.hxx>
 
 #include <armadillo>
 
@@ -150,9 +150,8 @@ void test_property_map()
     // Check PropertyMap<Node, int, MapTag>.
     {
         PropertyMap<Node, int, MapTag> map0;
-        map0[n0] = 27;
-        map0[n2] = 73;
-        vigra_assert(map0[n0] == 27 && map0[n2] == 73, "Error in operator[].");
+        map0.insert(n0, 27);
+        map0.insert(n2, 73);
         vigra_assert(map0.at(n0) == 27 && map0.at(n2) == 73, "Error in at.");
         vector<Node> keys;
         vector<Node> keys_expected = {n0, n2};
@@ -170,9 +169,8 @@ void test_property_map()
     // Check PropertyMap<Node, int, VectorTag>.
     {
         PropertyMap<Node, int, VectorTag> map0;
-        map0[n0] = 27;
-        map0[n2] = 73;
-        vigra_assert(map0[n0] == 27 && map0[n2] == 73, "Error in operator[].");
+        map0.insert(n0, 27);
+        map0.insert(n2, 73);
         vigra_assert(map0.at(n0) == 27 && map0.at(n2) == 73, "Error in at.");
         vector<Node> keys;
         vector<Node> keys_expected = {n0, n2};
@@ -216,13 +214,14 @@ void test_random_forest_class()
         gr.addArc(n2, n5);
         gr.addArc(n2, n6);
 
-        split_tests[n0] = SplitTest(0, 0.6);
-        split_tests[n1] = SplitTest(1, 0.25);
-        split_tests[n2] = SplitTest(1, 0.75);
-        leaf_responses[n3] = 0;
-        leaf_responses[n4] = 1;
-        leaf_responses[n5] = 2;
-        leaf_responses[n6] = 3;
+        split_tests.insert(n0, SplitTest(0, 0.6));
+        split_tests.insert(n1, SplitTest(1, 0.25));
+        split_tests.insert(n2, SplitTest(1, 0.75));
+        leaf_responses.insert(n3, 0);
+        leaf_responses.insert(n3, 0);
+        leaf_responses.insert(n4, 1);
+        leaf_responses.insert(n5, 2);
+        leaf_responses.insert(n6, 3);
     }
     RF rf = RF(gr, split_tests, leaf_responses, {0, 1, -7, 3}, 2);
 
@@ -353,13 +352,19 @@ void test_sparse_lars()
 
 void test_sparse_matrix()
 {
+    // TODO: Make "real" tests instead of some output.
+    int vals[] = {
+        10, 0, 0, 12, 0,
+        0, 0, 11, 0, 13,
+        0, 16, 0, 0, 0,
+        0, 0, 11, 0, 13
+    };
+    int vals2[] = {
+        1, 2,
+        3, 4,
+        5, 6
+    };
     {
-        int vals[] = {
-            10, 0, 0, 12, 0,
-            0, 0, 11, 0, 13,
-            0, 16, 0, 0, 0,
-            0, 0, 11, 0, 13
-        };
         sparse::DOKMatrix<int> m(Shape2(4, 5), vals);
         auto m_crs = to_crs(m);
         m_crs.print();
@@ -370,28 +375,38 @@ void test_sparse_matrix()
         cout << m_gram.shape() << endl;
     }
     {
-        int vals[] = {
-            10, 0, 0, 12, 0,
-            0, 0, 11, 0, 13,
-            0, 16, 0, 0, 0,
-            0, 0, 11, 0, 13
-        };
         sparse::COOMatrix<int> m(Shape2(4, 5), vals);
         auto m_crs = to_crs(m);
         m_crs.print();
     }
     {
-        int vals[] = {
-            1, 2,
-            3, 4,
-            5, 6
-        };
-        sparse::DOKMatrix<int> m(Shape2(3, 2), vals);
+        sparse::DOKMatrix<int> m(Shape2(3, 2), vals2);
         auto m_crs = to_crs(m);
         std::vector<int> x = {7, 8};
         auto y = m_crs.dot(x);
         m_crs.print();
         for (auto x : y) cout << x << " "; cout << endl;
+    }
+    {
+        sparse::COOMatrix<int> m(Shape2(4, 5), vals);
+        auto m_ccs = to_ccs(m);
+        auto m_crs = to_crs(m_ccs);
+        m_crs.print();
+    }
+    {
+        sparse::COOMatrix<int> m(Shape2(4, 5), vals);
+        auto m_crs = to_crs(m);
+        auto m_ccs = to_ccs(m_crs);
+        m_ccs.print();
+    }
+    {
+        sparse::COOMatrix<int> m(Shape2(4, 5), vals);
+        auto m_ccs = to_ccs(m);
+        auto m_trans = sparse::transpose(m_ccs);
+        cout << m_ccs.shape() << endl;
+        m_ccs.print();
+        cout << m_trans.shape() << endl;
+        m_trans.print();
     }
 }
 
@@ -406,8 +421,8 @@ void test_forest_garrote()
     int const n_trees = 100;
     string const train_filename = "/home/philip/data/ml-koethe/train.h5";
     string const test_filename = "/home/philip/data/ml-koethe/test.h5";
-    vector<LabelType> labels = {3, 8};
-    RandomForestOptions options = RandomForestOptions().tree_count(n_trees).bootstrap_sampling(true);
+    vector<LabelType> const labels = {3, 8};
+    RandomForestOptions const options = RandomForestOptions().tree_count(n_trees).bootstrap_sampling(true);
 
     // Load the data.
     Features train_x, test_x;
@@ -416,25 +431,45 @@ void test_forest_garrote()
 
     // Train the random forest.
     TIC;
-    auto rf = random_forest<Features, Labels, GiniScorer, PurityStop, ArgMaxVectorAcc>(train_x, train_y, options, n_threads);
+    auto const rf = random_forest<Features, Labels, GiniScorer, PurityStop, ArgMaxVectorAcc<size_t> >(train_x, train_y, options, n_threads);
     TOC("Random forest training");
 
-    // Predict with the forest.
-    Labels pred_y(Shape1(test_y.size()));
-    TIC;
-    rf.predict(test_x, pred_y, n_threads);
-    TOC("Random forest prediction");
+    {
+        // Predict with the forest.
+        Labels pred_y(Shape1(test_y.size()));
+        TIC;
+        rf.predict(test_x, pred_y, n_threads);
+        TOC("Random forest prediction");
 
-    // Count the correct predicted instances.
-    size_t count = 0;
-    for (size_t i = 0; i < test_y.size(); ++i)
-        if (pred_y(i) == test_y(i))
-            ++count;
-    double performance = count / (float)pred_y.size();
-    cout << "Performance: " << (count / ((float) pred_y.size())) << " (" << count << " of " << pred_y.size() << ")" << endl;
-    
+        // Count the correct predicted instances.
+        size_t count = 0;
+        for (size_t i = 0; i < test_y.size(); ++i)
+            if (pred_y(i) == test_y(i))
+                ++count;
+        double const performance = count / (float)pred_y.size();
+        cout << "Performance: " << (count / ((float) pred_y.size())) << " (" << count << " of " << pred_y.size() << ")" << endl;
+    }
+
     // Apply the forest garrote.
-    forest_garrote(rf, train_x, train_y);
+    TIC;
+    auto const refined_rf = forest_garrote(rf, train_x, train_y);
+    TOC("Forest garrote");
+
+    {
+        // Predict with the refined forest.
+        Labels pred_y(Shape1(test_y.size()));
+        TIC;
+        refined_rf.predict(test_x, pred_y, n_threads);
+        TOC("Refined random forest prediction");
+
+        // Count the correct predicted instances.
+        size_t count = 0;
+        for (size_t i = 0; i < test_y.size(); ++i)
+            if (pred_y(i) == test_y(i))
+                ++count;
+        double const performance = count / (float)pred_y.size();
+        cout << "Performance: " << (count / ((float) pred_y.size())) << " (" << count << " of " << pred_y.size() << ")" << endl;
+    }
 
     cout << "test_forest_garrote(): Success!" << endl;    
 }

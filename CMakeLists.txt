@@ -14,6 +14,22 @@ include_directories(${VIGRA_INCLUDE_DIR})
 find_package(HDF5 REQUIRED)
 include_directories(${HDF5_INCLUDE_DIR})
 
+# Boost
+find_package(Boost 1.47 REQUIRED)
+find_package(Boost COMPONENTS system filesystem python REQUIRED)
+add_definitions(-DWITH_BOOST)
+include_directories(
+    ${Boost_INCLUDE_DIRS}
+    ${Boost_PYTHON_INCLUDE_DIR}
+)
+
+# Python
+find_package(PythonLibs REQUIRED)
+include_directories(
+    ${PYTHON_INCLUDE_DIRS}
+    ${PYTHON_NUMPY_INCLUDE_DIR}
+)
+
 # Test executable
 add_executable(tests
     tests.cxx
@@ -22,6 +38,10 @@ add_executable(tests
 target_link_libraries(tests
     ${VIGRA_IMPEX_LIBRARY}
     ${HDF5_LIBRARIES}
+    ${PYTHON_LIBRARIES}
+    ${Boost_FILESYSTEM_LIBRARY}
+    ${Boost_SYSTEM_LIBRARY}
+    ${Boost_PYTHON_LIBRARIES}
     pthread
     armadillo
 )
