@@ -76,6 +76,17 @@ vector<RFParam> create_params()
 
 
 
+template <typename FEATURES, typename LABELS>
+void do_test(
+    vector<FEATURES> const & kfold_features,
+    vector<LABELS> const & kfold_labels,
+    RFParam const & params
+){
+    cout << "do_test(): Not implemented yet." << endl;
+}
+
+
+
 int main()
 {
     typedef float FeatureType;
@@ -114,21 +125,17 @@ int main()
     // Get the params.
     vector<RFParam> params = create_params();
 
-
+    // Start the parametertest.
     inferno::utilities::ThreadPool pool(n_threads);
     for (auto const & p : params)
     {
-        pool.enqueue([](size_t thread_id)
+        pool.enqueue([&kfold_features, &kfold_labels, &p](size_t thread_id)
             {
-
+                do_test(kfold_features, kfold_labels, p);
             }
         );
     }
     pool.waitFinished();
-
-
-
-
 
     cout << "done" << endl;
 }
