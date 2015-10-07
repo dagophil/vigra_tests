@@ -418,7 +418,7 @@ void test_forest_garrote()
     typedef MultiArray<1, LabelType> Labels;
 
     int const n_threads = -1;
-    int const n_trees = 100;
+    int const n_trees = 10;
     string const train_filename = "/home/philip/data/ml-koethe/train.h5";
     string const test_filename = "/home/philip/data/ml-koethe/test.h5";
     vector<LabelType> const labels = {3, 8};
@@ -484,6 +484,6 @@ int main()
     test_random_forest_mnist();
     test_sparse_lars();
     // test_sparse_matrix();
-    // test_forest_garrote();
+    test_forest_garrote();
 }
 

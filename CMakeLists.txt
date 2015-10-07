@@ -34,7 +34,6 @@ include_directories(
 add_executable(tests
     tests.cxx
 )
-
 target_link_libraries(tests
     ${VIGRA_IMPEX_LIBRARY}
     ${HDF5_LIBRARIES}
@@ -46,9 +45,23 @@ target_link_libraries(tests
     armadillo
 )
 
+# Parametertest executable
+add_executable(parametertest
+    parametertest.cxx
+)
+target_link_libraries(parametertest
+    ${VIGRA_IMPEX_LIBRARY}
+    ${HDF5_LIBRARIES}
+    ${PYTHON_LIBRARIES}
+    ${Boost_FILESYSTEM_LIBRARY}
+    ${Boost_SYSTEM_LIBRARY}
+    ${Boost_PYTHON_LIBRARIES}
+    pthread
+)
+
 # Run vigra installation before running the tests (I always forget that...)
 add_custom_target(install_vigra
     COMMAND make -C /home/philip/bld/vigra_newrf/ install > /dev/null
 )
 add_dependencies(tests install_vigra)
-
+add_dependencies(parametertest install_vigra)
