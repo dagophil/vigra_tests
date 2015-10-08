@@ -8,7 +8,7 @@
 #include <vigra/graphs_new.hxx>
 #include <vigra/random_forest_new.hxx>
 #include <vigra/random_forest_new/random_forest_common.hxx>
-#include <vigra/sparse/regression.hxx>
+// #include <vigra/sparse/regression.hxx>
 #include <vigra/sparse/matrix.hxx>
 
 // #include <armadillo>
