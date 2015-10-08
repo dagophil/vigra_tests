@@ -42,7 +42,6 @@ target_link_libraries(tests
     ${Boost_SYSTEM_LIBRARY}
     ${Boost_PYTHON_LIBRARIES}
     pthread
-    armadillo
 )
 
 # Parametertest executable
