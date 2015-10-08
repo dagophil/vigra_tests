@@ -61,7 +61,7 @@ target_link_libraries(parametertest
 
 # Run vigra installation before running the tests (I always forget that...)
 add_custom_target(install_vigra
-    COMMAND make -C /home/philip/bld/vigra_newrf/ install > /dev/null
+    COMMAND make -C /home/pschill/bld/vigra_newrf/ install > /dev/null
 )
 add_dependencies(tests install_vigra)
 add_dependencies(parametertest install_vigra)
