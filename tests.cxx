@@ -11,7 +11,7 @@
 #include <vigra/sparse/regression.hxx>
 #include <vigra/sparse/matrix.hxx>
 
-#include <armadillo>
+// #include <armadillo>
 
 #include "data_utility.hxx"
 
@@ -320,35 +320,35 @@ void test_random_forest_mnist()
     cout << "test_random_forest_mnist(): Success!" << endl;
 }
 
-void test_sparse_lars()
-{
-    // A =
-    // 0, 1, 0, 0,
-    // 1, 0, 1, 0,
-    // 0, 0, 0, 1,
-    // 0, 0, 1, 0,
-    // 1, 1, 0, 1
-    arma::sp_mat A(5, 4);
-    A(0, 1) = 1;
-    A(1, 0) = 1;
-    A(1, 2) = 1;
-    A(2, 3) = 1;
-    A(3, 2) = 1;
-    A(4, 0) = 1;
-    A(4, 1) = 1;
-    A(4, 3) = 1;
-    arma::vec B = {1, 2, 3, 4, 5};
-    auto lars = linalg::LARS(true, 0.5);
-    arma::vec sol;
-    lars.regress(A, B, sol);
+// void test_sparse_lars()
+// {
+//     // A =
+//     // 0, 1, 0, 0,
+//     // 1, 0, 1, 0,
+//     // 0, 0, 0, 1,
+//     // 0, 0, 1, 0,
+//     // 1, 1, 0, 1
+//     arma::sp_mat A(5, 4);
+//     A(0, 1) = 1;
+//     A(1, 0) = 1;
+//     A(1, 2) = 1;
+//     A(2, 3) = 1;
+//     A(3, 2) = 1;
+//     A(4, 0) = 1;
+//     A(4, 1) = 1;
+//     A(4, 3) = 1;
+//     arma::vec B = {1, 2, 3, 4, 5};
+//     auto lars = linalg::LARS(true, 0.5);
+//     arma::vec sol;
+//     lars.regress(A, B, sol);
 
-    arma::vec sol_expected = {0.1, 0.8, 2.7, 3.8};
-    vigra_assert(arma::all(arma::abs(sol-sol_expected) < 1e-10), "Error in LARS.");
-    // double loss = pow(arma::norm(A*sol-B, 2), 2) + 0.5 * arma::norm(sol, 1);
-    // cout << loss << endl;
+//     arma::vec sol_expected = {0.1, 0.8, 2.7, 3.8};
+//     vigra_assert(arma::all(arma::abs(sol-sol_expected) < 1e-10), "Error in LARS.");
+//     // double loss = pow(arma::norm(A*sol-B, 2), 2) + 0.5 * arma::norm(sol, 1);
+//     // cout << loss << endl;
 
-    cout << "test_sparse_lars(): Success!" << endl;
-}
+//     cout << "test_sparse_lars(): Success!" << endl;
+// }
 
 void test_sparse_matrix()
 {
@@ -482,7 +482,7 @@ int main()
     test_random_forest_class();
     test_default_random_forest();
     test_random_forest_mnist();
-    test_sparse_lars();
+    // test_sparse_lars();
     // test_sparse_matrix();
     test_forest_garrote();
 }
