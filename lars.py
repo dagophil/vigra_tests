@@ -3,13 +3,16 @@ import os
 import h5py
 import scipy.sparse
 import sklearn.linear_model
+import sklearn.svm
+import numpy
 
 
 def main():
     # Get and check the filenames and the alpha.
-    assert len(sys.argv) > 2
+    assert len(sys.argv) > 3
     filename_lars = sys.argv[1]
-    alpha = float(sys.argv[2])
+    algoname = sys.argv[2]
+    alpha = float(sys.argv[3])
     assert os.path.isfile(filename_lars)
 
     # Read the files.
@@ -20,9 +23,22 @@ def main():
         labels = f["labels"].value
     m = scipy.sparse.csr_matrix((values, col_index, row_ptr))
 
-    # Do the lasso.
-    coefs = sklearn.linear_model.lasso_path(m, labels, positive=True, alphas=[alpha])[1]
-    coefs = coefs[:, -1]
+    if algoname == "forest_garrote":
+        # Do the lasso.
+        coefs = sklearn.linear_model.lasso_path(m, labels, positive=True, max_iter=100, alphas=[alpha])[1]
+        coefs = coefs[:, -1]
+    elif algoname == "l2_svm":
+        # Use an l2 svm.
+        svm = sklearn.svm.LinearSVC(C=1.0, penalty="l2")
+        svm.fit(m, labels)
+        coefs = svm.coef_[0, :]
+    elif algoname == "l1_svm":
+        # Use an l1 svm.
+        svm = sklearn.svm.LinearSVC(C=1.0, penalty="l1", dual=False)
+        svm.fit(m, labels)
+        coefs = svm.coef_[0, :]
+    else:
+        raise Exception("Unknown algorithm: " + algoname)
 
     # Save the results.
     nnz = coefs.nonzero()[0]
