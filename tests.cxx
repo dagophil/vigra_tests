@@ -438,7 +438,7 @@ void test_forest_garrote()
         // Predict with the forest.
         Labels pred_y(Shape1(test_y.size()));
         TIC;
-        rf.predict(test_x, pred_y, n_threads);
+        double const comp = rf.predict(test_x, pred_y, n_threads);
         TOC("Random forest prediction");
 
         // Count the correct predicted instances.
@@ -448,18 +448,20 @@ void test_forest_garrote()
                 ++count;
         double const performance = count / (float)pred_y.size();
         cout << "Performance: " << (count / ((float) pred_y.size())) << " (" << count << " of " << pred_y.size() << ")" << endl;
+        cout << "Split comparisons: " << comp << endl;
     }
 
     // Apply the forest garrote.
     TIC;
-    auto const refined_rf = forest_garrote(rf, train_x, train_y);
+    auto const refined_rf = forest_garrote(rf, train_x, train_y, 1, "lars_data.h5", 0.0001, "forest_garrote");
+    // auto const refined_rf = forest_garrote(rf, train_x, train_y, 1, "lars_data.h5", 0.0001, "l2_svm");
     TOC("Forest garrote");
 
     {
         // Predict with the refined forest.
         Labels pred_y(Shape1(test_y.size()));
         TIC;
-        refined_rf.predict(test_x, pred_y, n_threads);
+        double const comp = refined_rf.predict(test_x, pred_y, n_threads);
         TOC("Refined random forest prediction");
 
         // Count the correct predicted instances.
@@ -469,6 +471,7 @@ void test_forest_garrote()
                 ++count;
         double const performance = count / (float)pred_y.size();
         cout << "Performance: " << (count / ((float) pred_y.size())) << " (" << count << " of " << pred_y.size() << ")" << endl;
+        cout << "Split comparisons: " << comp << endl;
     }
 
     cout << "test_forest_garrote(): Success!" << endl;    
