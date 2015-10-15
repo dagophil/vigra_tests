@@ -26,9 +26,11 @@ static string const logfilename = "PARAMETERLOG.txt";
 template <typename FEATURES, typename LABELS>
 void load_neuro_data(FEATURES & features, LABELS & labels)
 {
-    string const data_x_filename = "/home/philip/data/neuro/train/ffeat_br_segid0.h5";
+    //string const data_x_filename = "/home/philip/data/neuro/train/ffeat_br_segid0.h5";
+    string const data_x_filename = "/home/pschill/data/neuro/train/ffeat_br_segid0.h5";
     string const data_x_h5key = "ffeat_br";
-    string const data_y_filename = "/home/philip/data/neuro/train/gt_face_segid0.h5";
+    //string const data_y_filename = "/home/philip/data/neuro/train/gt_face_segid0.h5";
+    string const data_y_filename = "/home/pschill/data/neuro/train/gt_face_segid0.h5";
     string const data_y_h5key = "gt_face";
 
     HDF5File data_x_file(data_x_filename, HDF5File::ReadWrite);
@@ -265,7 +267,7 @@ void do_test_impl(
         }
 
         // Apply the forest garrote.
-        string fg_filename = "fg_" + to_string(thread_id) + ".h5";
+        string fg_filename = "/mnt/CLAWS1/pschill/tmp/fg_" + to_string(thread_id) + ".h5";
         starttime = chrono::steady_clock::now();
         auto const fg = forest_garrote(rf, train_x, train_y, 1, fg_filename);
         endtime = chrono::steady_clock::now();
@@ -450,6 +452,7 @@ int main(int argc, char** argv)
 
     // Get the params.
     vector<RFParam> params = create_params();
+    params.erase(params.begin(), params.begin()+213);
 
     // Create the write-to-file mutex.
     mutex mex;
