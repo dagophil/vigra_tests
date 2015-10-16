@@ -418,16 +418,28 @@ void test_forest_garrote()
     typedef MultiArray<1, LabelType> Labels;
 
     int const n_threads = -1;
-    int const n_trees = 10;
-    string const train_filename = "/home/philip/data/ml-koethe/train.h5";
-    string const test_filename = "/home/philip/data/ml-koethe/test.h5";
-    vector<LabelType> const labels = {3, 8};
-    RandomForestOptions const options = RandomForestOptions().tree_count(n_trees).bootstrap_sampling(true);
+    int const n_trees = 64;
+    // string const train_filename = "/home/philip/data/ml-koethe/train.h5";
+    // string const test_filename = "/home/philip/data/ml-koethe/test.h5";
+    // vector<LabelType> const labels = {3, 8};
+    RandomForestOptions const options = RandomForestOptions().tree_count(n_trees).bootstrap_sampling(false);
 
-    // Load the data.
+    // // Load the data.
     Features train_x, test_x;
     Labels train_y, test_y;
-    load_data(train_filename, test_filename, train_x, train_y, test_x, test_y, labels);
+    // load_data(train_filename, test_filename, train_x, train_y, test_x, test_y, labels);
+
+    HDF5File train_x_file("/home/philip/data/neuro/train/ffeat_br_segid0.h5", HDF5File::ReadOnly);
+    train_x_file.readAndResize("ffeat_br", train_x);
+    train_x = train_x.transpose();
+    HDF5File train_y_file("/home/philip/data/neuro/train/gt_face_segid0.h5", HDF5File::ReadOnly);
+    train_y_file.readAndResize("gt_face", train_y);
+
+    HDF5File test_x_file("/home/philip/data/neuro/test/ffeat_br_segid0.h5", HDF5File::ReadOnly);
+    test_x_file.readAndResize("ffeat_br", test_x);
+    test_x = test_x.transpose();
+    HDF5File test_y_file("/home/philip/data/neuro/test/gt_face_segid0.h5", HDF5File::ReadOnly);
+    test_y_file.readAndResize("gt_face", test_y);
 
     // Train the random forest.
     TIC;
@@ -479,14 +491,14 @@ void test_forest_garrote()
 
 int main()
 {
-    test_permutation_iterator();
-    test_binary_directed_graph();
-    test_property_map();
-    test_random_forest_class();
-    test_default_random_forest();
-    test_random_forest_mnist();
-    // test_sparse_lars();
-    // test_sparse_matrix();
+    // test_permutation_iterator();
+    // test_binary_directed_graph();
+    // test_property_map();
+    // test_random_forest_class();
+    // test_default_random_forest();
+    // test_random_forest_mnist();
+    // // test_sparse_lars();
+    // // test_sparse_matrix();
     test_forest_garrote();
 }
 
