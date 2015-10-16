@@ -419,8 +419,8 @@ void test_forest_garrote()
 
     int const n_threads = -1;
     int const n_trees = 10;
-    string const train_filename = "/home/philip/data/ml-koethe/train.h5";
-    string const test_filename = "/home/philip/data/ml-koethe/test.h5";
+    string const train_filename = "/home/pschill/data/ml-koethe/train.h5";
+    string const test_filename = "/home/pschill/data/ml-koethe/test.h5";
     vector<LabelType> const labels = {3, 8};
     RandomForestOptions const options = RandomForestOptions().tree_count(n_trees).bootstrap_sampling(true);
 
@@ -479,12 +479,12 @@ void test_forest_garrote()
 
 int main()
 {
-    test_permutation_iterator();
-    test_binary_directed_graph();
-    test_property_map();
-    test_random_forest_class();
-    test_default_random_forest();
-    test_random_forest_mnist();
+    //test_permutation_iterator();
+    //test_binary_directed_graph();
+    //test_property_map();
+    //test_random_forest_class();
+    //test_default_random_forest();
+    //test_random_forest_mnist();
     // test_sparse_lars();
     // test_sparse_matrix();
     test_forest_garrote();

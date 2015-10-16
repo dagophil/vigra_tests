@@ -49,27 +49,33 @@ public:
         string p_split = "gini",
         bool p_bootstrap_sampling = true,
         size_t p_resample_count = 0,
+        string p_weight_method = "forest_garrote",
         size_t p_id = 0
     )   :
         n_trees(p_n_trees),
         split(p_split),
         bootstrap_sampling(p_bootstrap_sampling),
         resample_count(p_resample_count),
+        weight_method(p_weight_method),
         id(p_id)
     {}
     size_t n_trees;
     string split;
     bool bootstrap_sampling;
     size_t resample_count;
+    string weight_method;
     size_t id;
 };
 
 vector<RFParam> create_params()
 {
-    vector<size_t> vec_n_trees = {1, 2, 4, 8, 16, 32, 64, 128, 256};
-    vector<string> vec_split = {"gini", "ksd", "entropy"};
-    vector<size_t> vec_resample_count = {8, 16, 32, 64, 128, 256, 512, 1024};
-    vector<bool> vec_bootstrap_sampling = {true, false};
+    vector<size_t> vec_n_trees = {1, 2, 4, 8, 16, 32, 64, 128};
+    //vector<string> vec_split = {"gini", "ksd", "entropy"};
+    vector<string> vec_split = {"gini", "ksd"};
+    //vector<size_t> vec_resample_count = {8, 16, 32, 64, 128, 256, 512, 1024};
+    vector<size_t> vec_resample_count = {0, 16, 32, 64, 128, 256, 512};
+    //vector<bool> vec_bootstrap_sampling = {true, false};
+    vector<string> vec_weight_method = {"forest_garrote", "l1_svm", "l2_svm"};
 
     vector<RFParam> params;
     for (auto n_trees : vec_n_trees)
@@ -78,11 +84,10 @@ vector<RFParam> create_params()
         {
             for (auto resample_count : vec_resample_count)
             {
-                params.push_back({n_trees, split, false, resample_count, params.size()});
-            }
-            for (auto bootstrap_sampling : vec_bootstrap_sampling)
-            {
-                params.push_back({n_trees, split, bootstrap_sampling, 0, params.size()});
+                for (auto weight_method : vec_weight_method)
+                {
+                    params.push_back({n_trees, split, false, resample_count, weight_method, params.size()});
+                }
             }
         }
     }
@@ -96,13 +101,15 @@ public:
     double predict_time;
     double performance;
     double num_nodes;
+    double split_counts;
 
-    Result(double p_train_time = 0, double p_predict_time = 0, double p_performance = 0, double p_num_nodes = 0)
+    Result(double p_train_time = 0, double p_predict_time = 0, double p_performance = 0, double p_num_nodes = 0, double p_split_counts = 0)
         :
         train_time(p_train_time),
         predict_time(p_predict_time),
         performance(p_performance),
-        num_nodes(p_num_nodes)
+        num_nodes(p_num_nodes),
+        split_counts(p_split_counts)
     {}
 
     Result & operator+=(Result const & other)
@@ -111,6 +118,7 @@ public:
         predict_time += other.predict_time;
         performance += other.performance;
         num_nodes += other.num_nodes;
+        split_counts += other.split_counts;
     }
 
     Result & operator-=(Result const & other)
@@ -119,6 +127,7 @@ public:
         predict_time -= other.predict_time;
         performance -= other.performance;
         num_nodes -= other.num_nodes;
+        split_counts -= other.split_counts;
     }
 
     Result & operator*=(Result const & other)
@@ -127,6 +136,7 @@ public:
         predict_time *= other.predict_time;
         performance *= other.performance;
         num_nodes *= other.num_nodes;
+        split_counts *= other.split_counts;
     }
 
     Result & operator*=(double d)
@@ -135,6 +145,7 @@ public:
         predict_time *= d;
         performance *= d;
         num_nodes *= d;
+        split_counts *= d;
     }
 
     Result & operator/=(double d)
@@ -143,6 +154,7 @@ public:
         predict_time /= d;
         performance /= d;
         num_nodes /= d;
+        split_counts /= d;
     }
 
     Result & operator/=(Result const & other)
@@ -151,6 +163,7 @@ public:
         predict_time /= other.predict_time;
         performance /= other.performance;
         num_nodes /= other.num_nodes;
+        split_counts /= other.split_counts;
     }
 };
 
@@ -192,7 +205,7 @@ Result operator/(Result a, double b)
 
 ostream & operator<<(ostream & out, Result const & a)
 {
-    out << a.train_time << " " << a.predict_time << " " << a.performance << " " << a.num_nodes;
+    out << a.train_time << " " << a.predict_time << " " << a.performance << " " << a.num_nodes << " " << a.split_counts;
     return out;
 }
 
@@ -202,6 +215,7 @@ Result sqrt(Result a)
     a.predict_time = sqrt(a.predict_time);
     a.performance = sqrt(a.performance);
     a.num_nodes = sqrt(a.num_nodes);
+    a.split_counts = sqrt(a.split_counts);
     return a;
 }
 
@@ -253,7 +267,7 @@ void do_test_impl(
         {
             MultiArray<1, LabelType> pred(Shape1(test_y.size()));
             starttime = chrono::steady_clock::now();
-            rf.predict(test_x, pred, 1);
+            rf_result.split_counts = rf.predict(test_x, pred, 1);
             endtime = chrono::steady_clock::now();
             sec = chrono::duration<double>(endtime-starttime).count();
             rf_result.predict_time = sec;
@@ -269,7 +283,7 @@ void do_test_impl(
         // Apply the forest garrote.
         string fg_filename = "/mnt/CLAWS1/pschill/tmp/fg_" + to_string(thread_id) + ".h5";
         starttime = chrono::steady_clock::now();
-        auto const fg = forest_garrote(rf, train_x, train_y, 1, fg_filename);
+        auto const fg = forest_garrote(rf, train_x, train_y, 1, fg_filename, 0.0001, params.weight_method);
         endtime = chrono::steady_clock::now();
         sec = chrono::duration<double>(endtime-starttime).count();
         fg_result.train_time = sec;
@@ -279,7 +293,7 @@ void do_test_impl(
         {
             MultiArray<1, LabelType> pred(Shape1(test_y.size()));
             starttime = chrono::steady_clock::now();
-            fg.predict(test_x, pred, 1);
+            fg_result.split_counts = fg.predict(test_x, pred, 1);
             endtime = chrono::steady_clock::now();
             sec = chrono::duration<double>(endtime-starttime).count();
             fg_result.predict_time = sec;
@@ -322,7 +336,7 @@ void do_test_impl(
     // Write the result.
     stringstream ss;
     ss << "# Parameter " + to_string(params.id) + "\n";
-    ss << "{n_trees: " + to_string(params.n_trees) + ", bootstrap_sampling: " + to_string(params.bootstrap_sampling) + ", resample_count: " + to_string(params.resample_count) + ", split: \"" + params.split + "\"}\n";
+    ss << "{n_trees: " + to_string(params.n_trees) + ", bootstrap_sampling: " + to_string(params.bootstrap_sampling) + ", resample_count: " + to_string(params.resample_count) + ", split: \"" + params.split + "\", weight_method: \"" + params.weight_method + "\"}\n";
     ss << "RF_mean: " << mean_rf_result << "\n";
     ss << "RF_std: " << std_rf_result << "\n";
     ss << "FG_mean: " << mean_fg_result << "\n";
@@ -452,7 +466,7 @@ int main(int argc, char** argv)
 
     // Get the params.
     vector<RFParam> params = create_params();
-    params.erase(params.begin(), params.begin()+213);
+    //params.erase(params.begin(), params.begin()+213);
 
     // Create the write-to-file mutex.
     mutex mex;
