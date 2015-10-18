@@ -6,6 +6,8 @@ import sklearn.linear_model
 import sklearn.svm
 import numpy
 import argparse
+import warnings
+from sklearn.utils import ConvergenceWarning
 
 
 parser = argparse.ArgumentParser(description="Forest garrote script")
@@ -24,6 +26,8 @@ def main(args):
     alpha = args.a
     group_splits = args.g
     assert os.path.isfile(filename_lars)
+    
+    warnings.simplefilter("ignore", ConvergenceWarning)
 
     # Read the files.
     with h5py.File(filename_lars) as f:
