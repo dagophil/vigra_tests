@@ -418,7 +418,7 @@ void test_forest_garrote()
     typedef MultiArray<1, LabelType> Labels;
 
     int const n_threads = -1;
-    int const n_trees = 64;
+    int const n_trees = 20;
     string const train_filename = "/home/philip/data/ml-koethe/train.h5";
     string const test_filename = "/home/philip/data/ml-koethe/test.h5";
     vector<LabelType> const labels = {3, 8};
@@ -453,7 +453,7 @@ void test_forest_garrote()
 
     // Apply the forest garrote.
     TIC;
-    auto const refined_rf = forest_garrote(rf, train_x, train_y, 1, "lars_data.h5", 0.0001, "forest_garrote");
+    auto const refined_rf = forest_garrote(rf, train_x, train_y, 1, "lars_data.h5", 0.00005, "forest_garrote", 4);
     // auto const refined_rf = forest_garrote(rf, train_x, train_y, 1, "lars_data.h5", 0.0001, "l2_svm");
     TOC("Forest garrote");
 
