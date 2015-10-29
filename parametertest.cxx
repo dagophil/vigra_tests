@@ -23,7 +23,7 @@
 using namespace std;
 using namespace vigra;
 
-static string logfilename = "PARAMETERLOG_stopping_criteria.txt";// "PARAMETERLOG_fg_without_bootstrap.txt";
+static string logfilename = "";
 
 struct RFParam
 {
