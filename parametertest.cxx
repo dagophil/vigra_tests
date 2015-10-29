@@ -404,7 +404,7 @@ void do_test_stopping_criteria(
     stringstream ss;
     ss << "# Parameter " + to_string(params.id) + "\n";
     ss << "n_trees: " + to_string(params.options.tree_count_) + 
-          ", tau: " + to_string(params.options.node_complexity_tau_) + 
+          ", tau: " + to_string((int)std::round(std::log10(params.options.node_complexity_tau_))) + 
           ", max_depth: " + to_string(params.options.max_depth_) + 
           ", min_num_instances:" + to_string(params.options.min_num_instances_) + "\n";
     ss << "RF_mean: " << mean_rf_result << "\n";
