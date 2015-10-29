@@ -1,13 +1,11 @@
 #ifndef DATA_UTILITY_HXX
 #define DATA_UTILITY_HXX
 
+#include <vector>
+#include <stdexcept>
+
 #include <vigra/multi_array.hxx>
 #include <vigra/hdf5impex.hxx>
-
-
-
-namespace vigra
-{
 
 
 
@@ -19,7 +17,9 @@ void load_data(
         vigra::MultiArray<1, T> & train_y,
         vigra::MultiArray<2, S> & test_x,
         vigra::MultiArray<1, T> & test_y,
-        std::vector<T> const & labels = {}
+        std::vector<T> const & labels = {},
+        std::string const & features_key = "data",
+        std::string const & labels_key = "labels"
 ){
     using namespace vigra;
 
@@ -28,16 +28,16 @@ void load_data(
     MultiArray<1, T> tmp_train_y;
     MultiArray<2, S> tmp_test_x;
     MultiArray<1, T> tmp_test_y;
-    HDF5ImportInfo info(train_filename.c_str(), "data");
+    HDF5ImportInfo info(train_filename.c_str(), features_key.c_str());
     tmp_train_x.reshape(Shape2(info.shape().begin()));
     readHDF5(info, tmp_train_x);
-    info = HDF5ImportInfo(train_filename.c_str(), "labels");
+    info = HDF5ImportInfo(train_filename.c_str(), labels_key.c_str());
     tmp_train_y.reshape(Shape1(info.shape().begin()));
     readHDF5(info, tmp_train_y);
-    info = HDF5ImportInfo(test_filename.c_str(), "data");
+    info = HDF5ImportInfo(test_filename.c_str(), features_key.c_str());
     tmp_test_x.reshape(Shape2(info.shape().begin()));
     readHDF5(info, tmp_test_x);
-    info = HDF5ImportInfo(test_filename.c_str(), "labels");
+    info = HDF5ImportInfo(test_filename.c_str(), labels_key.c_str());
     tmp_test_y.reshape(Shape1(info.shape().begin()));
     readHDF5(info, tmp_test_y);
 
@@ -127,7 +127,87 @@ void load_data(
 
 
 
-} // namespace vigra
+template <typename FeatureType, typename LabelType>
+void create_real_kfolds(
+        size_t n_kfolds,
+        vigra::MultiArray<2, FeatureType> const & features,
+        vigra::MultiArray<1, LabelType> const & labels,
+        std::vector<vigra::MultiArray<2, FeatureType> > & kfold_train_features,
+        std::vector<vigra::MultiArray<1, LabelType> > & kfold_train_labels,
+        std::vector<vigra::MultiArray<2, FeatureType> > & kfold_test_features,
+        std::vector<vigra::MultiArray<1, LabelType> > & kfold_test_labels
+){
+    using namespace std;
+    using namespace vigra;
+
+    vigra_precondition(features.shape()[0] == labels.size(), "create_real_kfolds(): Shape mismatch.");
+
+    size_t const num_features = features.shape()[1];
+
+    vector<size_t> indices(features.shape()[0]);
+    iota(indices.begin(), indices.end(), 0);
+    random_shuffle(indices.begin(), indices.end());
+    for (size_t iii = 0; iii < n_kfolds; ++iii)
+    {
+        size_t const test_begin = indices.size() * static_cast<double>(iii) / n_kfolds;
+        size_t const test_end = indices.size() * static_cast<double>(iii+1) / n_kfolds;
+        vector<size_t> test_indices(indices.begin()+test_begin, indices.begin()+test_end);
+        vector<size_t> train_indices(indices.begin(), indices.end());
+        train_indices.erase(train_indices.begin()+test_begin, train_indices.begin()+test_end);
+        sort(test_indices.begin(), test_indices.end());
+        sort(train_indices.begin(), train_indices.end());
+
+        // Build the training set.
+        kfold_train_features.push_back(MultiArray<2, FeatureType>(Shape2(train_indices.size(), num_features)));
+        kfold_train_labels.push_back(MultiArray<1, LabelType>(Shape1(train_indices.size())));
+        auto & train_x = kfold_train_features.back();
+        auto & train_y = kfold_train_labels.back();
+        for (size_t y = 0; y < num_features; ++y)
+        {
+            for (size_t j = 0; j < train_indices.size(); ++j)
+            {
+                train_x(j, y) = features(train_indices[j], y);
+            }
+        }
+        for (size_t j = 0; j < train_indices.size(); ++j)
+        {
+            train_y(j) = labels(train_indices[j]);
+        }
+
+        // Build the test set.
+        kfold_test_features.push_back(MultiArray<2, FeatureType>(Shape2(test_indices.size(), num_features)));
+        kfold_test_labels.push_back(MultiArray<1, LabelType>(Shape1(test_indices.size())));
+        auto & test_x = kfold_test_features.back();
+        auto & test_y = kfold_test_labels.back();
+        for (size_t y = 0; y < num_features; ++y)
+        {
+            for (size_t j = 0; j < test_indices.size(); ++j)
+            {
+                test_x(j, y) = features(test_indices[j], y);
+            }
+        }
+        for (size_t j = 0; j < test_indices.size(); ++j)
+        {
+            test_y(j) = labels(test_indices[j]);
+        }
+    }
+}
+
+
+
+template <typename ARR0, typename ARR1>
+size_t count_equal_values(
+        ARR0 const & a,
+        ARR1 const & b
+){
+    if (a.size() != b.size())
+        throw std::runtime_error("count_equal_values(): Shape mismatch.");
+    size_t count = 0;
+    for (size_t i = 0; i < a.size(); ++i)
+        if (a(i) == b(i))
+            ++count;
+    return count;
+}
 
 
 
