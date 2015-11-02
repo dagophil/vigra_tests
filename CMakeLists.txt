@@ -16,7 +16,7 @@ include_directories(${HDF5_INCLUDE_DIR})
 
 # Boost
 find_package(Boost 1.47 REQUIRED)
-find_package(Boost COMPONENTS system filesystem python REQUIRED)
+find_package(Boost COMPONENTS system filesystem program_options python REQUIRED)
 add_definitions(-DWITH_BOOST)
 include_directories(
     ${Boost_INCLUDE_DIRS}
@@ -28,20 +28,6 @@ find_package(PythonLibs REQUIRED)
 include_directories(
     ${PYTHON_INCLUDE_DIRS}
     ${PYTHON_NUMPY_INCLUDE_DIR}
-)
-
-# Test executable
-add_executable(tests
-    tests.cxx
-)
-target_link_libraries(tests
-    ${VIGRA_IMPEX_LIBRARY}
-    ${HDF5_LIBRARIES}
-    ${PYTHON_LIBRARIES}
-    ${Boost_FILESYSTEM_LIBRARY}
-    ${Boost_SYSTEM_LIBRARY}
-    ${Boost_PYTHON_LIBRARIES}
-    pthread
 )
 
 # Parametertest executable
@@ -60,7 +46,6 @@ target_link_libraries(parametertest
 
 # Run vigra installation before running the tests (I always forget that...)
 add_custom_target(install_vigra
-    COMMAND make -C /home/pschill/bld/vigra_newrf/ install > /dev/null
+    COMMAND make -C /home/philip/bld/vigra_new/ install > /dev/null
 )
-add_dependencies(tests install_vigra)
 add_dependencies(parametertest install_vigra)

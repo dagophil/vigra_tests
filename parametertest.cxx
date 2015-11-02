@@ -11,11 +11,10 @@
 #include <type_traits>
 #include <sstream>
 
-#include <vigra/random_forest_new/forest_garrote.hxx>
 #include <vigra/multi_array.hxx>
 #include <vigra/hdf5impex.hxx>
 #include <vigra/sampling.hxx>
-#include <vigra/pool.hxx>
+#include <vigra/threadpool.hxx>
 #include <vigra/random_forest_new.hxx>
 
 #include "data_utility.hxx"
@@ -29,71 +28,53 @@ struct RFParam
 {
 public:
     RFParam(
-        RandomForestOptions p_options = RandomForestOptions(),
-        vector<double> p_alphas = {0.0003},
-        vector<int> p_group_sizes = {0},
+        RandomForestNewOptions p_options = RandomForestNewOptions(),
         size_t p_id = 0
     )   :
         options(p_options),
-        alphas(p_alphas),
-        group_sizes(p_group_sizes),
         id(p_id)
     {}
-    RandomForestOptions options;
-    vector<double> alphas;
-    vector<int> group_sizes;
+    RandomForestNewOptions options;
     size_t id;
 };
 
 vector<RFParam> create_stopping_params()
 {
-    vector<double> taus = {1e-3, 1e-6, 1e-9, 1e-12, 1e-15, 1e-18, 1e-21, 1e-24, 1e-27, 1e-30, 1e-33, 1e-36, 1e-39, 1e-42, 1e-45, 1e-48};
-    vector<size_t> depths = {2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30};
-    vector<size_t> min_num_instances = {1, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 140, 180, 220, 260, 300, 350, 400, 450, 500, 550, 600, 650, 700, 800, 900, 1000};
+    // vector<double> taus = {1e-3, 1e-6, 1e-9, 1e-12, 1e-15, 1e-18, 1e-21, 1e-24, 1e-27, 1e-30, 1e-33, 1e-36, 1e-39, 1e-42, 1e-45, 1e-48};
+    // vector<size_t> min_num_instances = {1, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 140, 180, 220, 260, 300, 350, 400, 450, 500, 550, 600, 650, 700, 800, 900, 1000};
+    // vector<size_t> depths = {2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30};
+    vector<double> taus = {3e-1, 1e-1, 3e-2, 1e-2, 3e-3};
+    vector<size_t> depths = {30};
+    vector<size_t> min_num_instances = {2, 3, 4};
 
     vector<RFParam> params;
     for (auto tau : taus)
     {
-        params.push_back({RandomForestOptions().tree_count(100).node_complexity_tau(tau)});
+        params.push_back({RandomForestNewOptions().tree_count(100).node_complexity_tau(tau)});
         params.back().id = params.size()-1;
     }
     for (auto depth : depths)
     {
-        params.push_back({RandomForestOptions().tree_count(100).max_depth(depth)});
+        params.push_back({RandomForestNewOptions().tree_count(100).max_depth(depth)});
         params.back().id = params.size()-1;
     }
     for (auto n : min_num_instances)
     {
-        params.push_back({RandomForestOptions().tree_count(100).min_num_instances(n)});
+        params.push_back({RandomForestNewOptions().tree_count(100).min_num_instances(n)});
         params.back().id = params.size()-1;
     }
     return params;
 }
 
-vector<RFParam> create_params()
+vector<RFParam> create_ksd_params()
 {
-    vector<size_t> vec_n_trees = {4, 8, 16, 32, 64, 128};
-    vector<bool> vec_bootstrap = {true, false};
-    vector<double> vec_alphas = {3e-5};
-    vector<int> vec_group_sizes = {0};
-    // vector<double> vec_alphas = {1e-3, 3e-4, 1e-4, 3e-5, 1e-5};
-    // vector<int> vec_group_sizes = {0, 1, 2, 4, 8, 16, 32};
-
+    vector<size_t> n_trees = {4, 8, 16, 32, 64, 128};
     vector<RFParam> params;
-    for (auto n_trees : vec_n_trees)
+    for (auto n : n_trees)
     {
-        for (auto bootstrap : vec_bootstrap)
-        {
-            vector<int> allowed_group_sizes;
-            for (auto g : vec_group_sizes)
-            {
-                if (g < n_trees)
-                {
-                    allowed_group_sizes.push_back(g);
-                }
-            }
-            params.push_back({RandomForestOptions().tree_count(n_trees).bootstrap_sampling(bootstrap), vec_alphas, allowed_group_sizes, params.size()});
-        }
+        params.push_back({RandomForestNewOptions().tree_count(n).split(RF_GINI), params.size()});
+        params.push_back({RandomForestNewOptions().tree_count(n).split(RF_ENTROPY), params.size()});
+        params.push_back({RandomForestNewOptions().tree_count(n).split(RF_KSD), params.size()});
     }
     return params;
 }
@@ -242,120 +223,6 @@ Result std_dev(vector<Result> const & v)
 }
 
 
-
-template <typename FEATURES, typename LABELS>
-void do_test_forest_garrote_variants(
-    size_t thread_id,
-    vector<FEATURES> const & kfold_train_x,
-    vector<LABELS> const & kfold_train_y,
-    vector<FEATURES> const & kfold_test_x,
-    vector<LABELS> const & kfold_test_y,
-    RFParam const & params,
-    mutex & mex
-){
-    typedef typename FEATURES::value_type FeatureType;
-    typedef typename LABELS::value_type LabelType;
-
-    cout << "running param " << params.id << endl;
-
-    string const fg_filename = "/mnt/CLAWS1/pschill/tmp/fg_" + to_string(thread_id) + ".h5";
-
-    size_t const n_kfolds = kfold_train_x.size();
-    RandomForestOptions const opts = params.options;
-
-    vector<Result> rf_results;
-    vector<vector<Result> > fg_results(params.alphas.size() * params.group_sizes.size());
-
-    for (size_t i = 0; i < n_kfolds; ++i)
-    {
-        auto const & train_x = kfold_train_x[i];
-        auto const & train_y = kfold_train_y[i];
-        auto const & test_x = kfold_test_x[i];
-        auto const & test_y = kfold_test_y[i];
-
-        // Get the random forest results.
-        Result rf_result;
-        auto const rf = random_forest<FEATURES, LABELS>(
-            train_x, train_y, opts, 1
-        );
-        rf_result.num_nodes = rf.num_nodes();
-        LABELS pred(Shape1(test_y.size()));
-        rf_result.split_counts = rf.predict(test_x, pred, 1);
-        size_t const count = cmp_marray(test_y, pred);
-        rf_result.performance = static_cast<double>(count) / test_y.size();
-        rf_results.push_back(rf_result);
-
-        // Apply the forest garrote variants.
-        for (size_t j = 0; j < params.alphas.size(); ++j)
-        {
-            auto alpha = params.alphas[j];
-            for (size_t k = 0; k < params.group_sizes.size(); ++k)
-            {
-                auto group_size = params.group_sizes[k];
-                Result fg_result;
-                std::cout << "starting forest garrote with " << alpha << " and " << group_size << std::endl;
-                try
-                {
-                    auto const fg = forest_garrote(rf, train_x, train_y, 1, fg_filename, alpha, "forest_garrote", group_size);
-                    fg_result.num_nodes = fg.num_nodes();
-                    LABELS pred(Shape1(test_y.size()));
-                    fg_result.split_counts = fg.predict(test_x, pred, 1);
-                    size_t const count = count_equal_values(test_y, pred);
-                    fg_result.performance = static_cast<double>(count) / test_y.size();
-                }
-                catch(runtime_error & ex)
-                {
-                    cout << "error in forest garrote" << endl;
-                    fg_result.valid = false;
-                }
-                fg_results.at(j*params.group_sizes.size()+k).push_back(fg_result);
-            }
-        }
-    }
-
-    // Find the mean of the results.
-    Result mean_rf_result = mean(rf_results);
-    vector<Result> mean_fg_results;
-    for (auto const & v : fg_results)
-    {
-        mean_fg_results.push_back(mean(v));
-    }
-
-    // Find the standard deviation of the results.
-    Result std_rf_result = std_dev(rf_results);
-    vector<Result> std_fg_results;
-    for (auto const & v : fg_results)
-    {
-        std_fg_results.push_back(std_dev(v));
-    }
-
-    // Write the results to the file.
-    stringstream ss;
-    ss << "# Parameter " + to_string(params.id) + "\n";
-    ss << "\"n_trees\": " + to_string(params.options.tree_count_) + "\n";
-    ss << "RF_mean: " << mean_rf_result << "\n";
-    ss << "RF_std: " << std_rf_result << "\n";
-    for (size_t j = 0; j < params.alphas.size(); ++j)
-    {
-        auto alpha = params.alphas[j];
-        for (size_t k = 0; k < params.group_sizes.size(); ++k)
-        {
-            auto group_size = params.group_sizes[k];
-            ss << "FG_mean " << to_string(alpha) << " " << to_string(group_size) << ": " << mean_fg_results.at(j*params.group_sizes.size()+k) << "\n";
-            ss << "FG_std " << to_string(alpha) << " " << to_string(group_size) << ": " << std_fg_results.at(j*params.group_sizes.size()+k) << "\n";
-        }
-    }
-
-    {
-        lock_guard<mutex> lock(mex);
-        ofstream f(logfilename, ios::app);
-        f << ss.str();
-        f.close();
-    }
-}
-
-
-
 template <typename FEATURES, typename LABELS>
 void do_test_stopping_criteria(
     size_t thread_id,
@@ -372,7 +239,7 @@ void do_test_stopping_criteria(
     cout << "running param " << params.id << endl;
 
     size_t const n_kfolds = kfold_train_x.size();
-    RandomForestOptions const opts = params.options;
+    RandomForestNewOptions const opts = params.options;
 
     vector<Result> rf_results;
 
@@ -407,6 +274,70 @@ void do_test_stopping_criteria(
           ", tau: " + to_string((int)std::round(std::log10(params.options.node_complexity_tau_))) + 
           ", max_depth: " + to_string(params.options.max_depth_) + 
           ", min_num_instances:" + to_string(params.options.min_num_instances_) + "\n";
+    ss << "RF_mean: " << mean_rf_result << "\n";
+    ss << "RF_std: " << std_rf_result << "\n";
+
+    {
+        lock_guard<mutex> lock(mex);
+        ofstream f(logfilename, ios::app);
+        f << ss.str();
+        f.close();
+    }
+}
+
+template <typename FEATURES, typename LABELS>
+void do_test_ksd(
+    size_t thread_id,
+    vector<FEATURES> const & kfold_train_x,
+    vector<LABELS> const & kfold_train_y,
+    vector<FEATURES> const & kfold_test_x,
+    vector<LABELS> const & kfold_test_y,
+    RFParam const & params,
+    mutex & mex
+){
+    typedef typename FEATURES::value_type FeatureType;
+    typedef typename LABELS::value_type LabelType;
+
+    cout << "running param " << params.id << endl;
+    std::map<RandomForestOptionTags, string> split_to_string = {
+        {RF_GINI, "gini"},
+        {RF_ENTROPY, "entropy"},
+        {RF_KSD, "ksd"}
+    };
+
+    size_t const n_kfolds = kfold_train_x.size();
+    RandomForestNewOptions const opts = params.options;
+
+    vector<Result> rf_results;
+
+    for (size_t i = 0; i < n_kfolds; ++i)
+    {
+        auto const & train_x = kfold_train_x[i];
+        auto const & train_y = kfold_train_y[i];
+        auto const & test_x = kfold_test_x[i];
+        auto const & test_y = kfold_test_y[i];
+
+        // Get the random forest results.
+        Result rf_result;
+        auto const rf = random_forest<FEATURES, LABELS>(
+            train_x, train_y, opts, 1
+        );
+        rf_result.num_nodes = rf.num_nodes();
+        LABELS pred(Shape1(test_y.size()));
+        rf_result.split_counts = rf.predict(test_x, pred, 1);
+        size_t const count = count_equal_values(test_y, pred);
+        rf_result.performance = static_cast<double>(count) / test_y.size();
+        rf_results.push_back(rf_result);
+    }
+
+    // Find the mean and standard deviation of the results.
+    Result mean_rf_result = mean(rf_results);
+    Result std_rf_result = std_dev(rf_results);
+
+    // Write the results to the file.
+    stringstream ss;
+    ss << "# Parameter " + to_string(params.id) + "\n";
+    ss << "n_trees: " + to_string(params.options.tree_count_) + ", split: " << split_to_string[params.options.split_] + "\n";
     ss << "RF_mean: " << mean_rf_result << "\n";
     ss << "RF_std: " << std_rf_result << "\n";
 
@@ -473,7 +404,7 @@ int main(int argc, char** argv)
     mutex mex;
 
     // Start the parametertest.
-    inferno::utilities::ThreadPool pool(n_threads);
+    ThreadPool pool(n_threads);
     for (auto const & p : params)
     {
         pool.enqueue([&](size_t thread_id)
